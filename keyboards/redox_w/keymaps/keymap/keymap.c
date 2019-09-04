@@ -1,5 +1,7 @@
 #include QMK_KEYBOARD_H
+
 #include "quantum.h"
+#include "secrets.h"
 
 typedef struct {
     bool is_press_action;
@@ -18,7 +20,8 @@ enum {
 
 // Tap dance enums
 enum {
-    X_CTL = 0,
+    X_CTL      = 0,
+    SECRET_CTL = 1,
 };
 
 int cur_dance(qk_tap_dance_state_t *state);
@@ -27,7 +30,11 @@ int cur_dance(qk_tap_dance_state_t *state);
 void x_finished(qk_tap_dance_state_t *state, void *user_data);
 void x_reset(qk_tap_dance_state_t *state, void *user_data);
 
-const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {[0] = LAYOUT(KC_GRV, KC_1, KC_2, KC_3, KC_4, KC_5, KC_8, KC_9, KC_0, KC_MINS, KC_LBRC, KC_RBRC, LALT_T(KC_TAB), KC_Q, KC_W, KC_E, KC_R, KC_T, KC_6, KC_7, KC_Y, KC_U, KC_I, KC_O, KC_P, KC_BSLS, TD(X_CTL), KC_A, KC_S, KC_D, KC_F, KC_G, KC_NO, KC_TILD, KC_H, KC_J, KC_K, KC_L, KC_SCLN, KC_QUOT, KC_LSFT, KC_Z, KC_X, KC_C, KC_V, KC_B, KC_NO, KC_NO, KC_NO, KC_NO, KC_N, KC_M, KC_COMM, KC_DOT, KC_SLSH, KC_NO, KC_NO, KC_NO, KC_NO, KC_NO, KC_SPC, KC_BSPC, MO(1), KC_NO, KC_ENT, MO(2), KC_NO, KC_NO, KC_NO, KC_NO),
+// for the SECRET tap dance. Put it here so it can be used in any keymap
+void secret_finished(qk_tap_dance_state_t *state, void *user_data);
+void secret_reset(qk_tap_dance_state_t *state, void *user_data);
+
+const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {[0] = LAYOUT(KC_GRV, KC_1, KC_2, KC_3, KC_4, KC_5, KC_8, KC_9, KC_0, KC_MINS, KC_LBRC, KC_RBRC, LALT_T(KC_TAB), KC_Q, KC_W, KC_E, KC_R, KC_T, KC_6, KC_7, KC_Y, KC_U, KC_I, KC_O, KC_P, KC_BSLS, TD(X_CTL), KC_A, KC_S, KC_D, KC_F, KC_G, KC_NO, KC_TILD, KC_H, KC_J, KC_K, KC_L, KC_SCLN, KC_QUOT, KC_LSFT, KC_Z, KC_X, KC_C, KC_V, KC_B, KC_NO, KC_NO, KC_NO, TD(SECRET_CTL), KC_N, KC_M, KC_COMM, KC_DOT, KC_SLSH, KC_NO, KC_NO, KC_NO, KC_NO, KC_NO, KC_SPC, KC_BSPC, MO(1), KC_NO, KC_ENT, MO(2), KC_NO, KC_NO, KC_NO, KC_NO),
                                                               [1] = LAYOUT(KC_NO, KC_NO, KC_NO, KC_NO, KC_NO, KC_NO, KC_NO, KC_NO, KC_NO, KC_NO, KC_NO, RESET, KC_TRNS, KC_F1, KC_F2, KC_F3, KC_F4, KC_NO, KC_NO, KC_NO, KC_NO, KC_NO, KC_NO, KC_NO, KC_NO, KC_NO, KC_TRNS, KC_F5, KC_F6, KC_F7, KC_F8, KC_NO, KC_NO, KC_NO, KC_LEFT, KC_DOWN, KC_UP, KC_RGHT, KC_NO, KC_NO, KC_TRNS, KC_F9, KC_F10, KC_F11, KC_F12, KC_NO, KC_NO, KC_NO, KC_NO, KC_NO, KC_NO, KC_NO, KC_NO, KC_NO, KC_NO, KC_NO, KC_NO, KC_NO, KC_NO, KC_NO, KC_NO, KC_NO, KC_TRNS, KC_NO, KC_NO, KC_TRNS, KC_NO, KC_NO, KC_NO, KC_NO),
                                                               [2] = LAYOUT(KC_NO, KC_NO, KC_NO, KC_NO, KC_NO, KC_NO, KC_NO, KC_NO, KC_NO, KC_NO, KC_NO, KC_NO, KC_TRNS, KC_NO, KC_NO, KC_NO, KC_NO, KC_NO, KC_NO, KC_NO, KC_NO, KC_1, KC_2, KC_3, KC_4, KC_NO, KC_TRNS, KC_NO, KC_NO, KC_NO, KC_NO, KC_NO, KC_NO, KC_NO, KC_NO, KC_5, KC_6, KC_7, KC_8, KC_NO, KC_TRNS, KC_NO, KC_NO, KC_NO, KC_NO, KC_NO, KC_NO, KC_NO, KC_NO, KC_NO, KC_NO, KC_9, KC_0, KC_MINS, KC_EQL, KC_NO, KC_NO, KC_NO, KC_NO, KC_NO, KC_NO, KC_NO, KC_TRNS, KC_NO, KC_NO, KC_TRNS, KC_NO, KC_NO, KC_NO, KC_NO)};
 
@@ -88,7 +95,7 @@ int cur_dance(qk_tap_dance_state_t *state) {
     } else
         return 8;  // magic number. At some point this method will expand to work for more presses
 }
-
+// -------------  X CTL ----------------------------------
 // instanalize an instance of 'tap' for the 'x' tap dance.
 static tap xtap_state = {.is_press_action = true, .state = 0};
 
@@ -125,4 +132,43 @@ void x_reset(qk_tap_dance_state_t *state, void *user_data) {
     xtap_state.state = 0;
 }
 
-qk_tap_dance_action_t tap_dance_actions[] = {[X_CTL] = ACTION_TAP_DANCE_FN_ADVANCED(NULL, x_finished, x_reset)};
+// -------------  SECRET CTL ----------------------------------
+// instanalize an instance of 'tap' for the 'secret' tap dance.
+static tap secret_tap_state = {.is_press_action = true, .state = 0};
+
+// Single tap -  nothing, to prevent accidental entry
+// Double tap -  nothing, to prevent accidental entry
+// single tap and hold -  SECRET_1
+// double tap and hold - SECRET_2
+
+void secret_finished(qk_tap_dance_state_t *state, void *user_data) {
+    secret_tap_state.state = cur_dance(state);
+    switch (secret_tap_state.state) {
+        case SINGLE_HOLD:
+            break;
+        case DOUBLE_HOLD:
+            break;
+        case TRIPLE_HOLD:
+            break;
+    }
+}
+
+void secret_reset(qk_tap_dance_state_t *state, void *user_data) {
+    switch (secret_tap_state.state) {
+        case SINGLE_HOLD:
+            SEND_STRING (SECRET_1);
+            break;
+        case DOUBLE_HOLD:
+            SEND_STRING (SECRET_2);
+            break;
+        case TRIPLE_HOLD:
+            SEND_STRING (SECRET_3);
+            break;
+    }
+    secret_tap_state.state = 0;
+}
+
+qk_tap_dance_action_t tap_dance_actions[] = {
+    [X_CTL]      = ACTION_TAP_DANCE_FN_ADVANCED(NULL, x_finished, x_reset),
+    [SECRET_CTL] = ACTION_TAP_DANCE_FN_ADVANCED(NULL, secret_finished, secret_reset),
+};
