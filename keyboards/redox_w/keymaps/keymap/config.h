@@ -6,4 +6,4 @@
 #define MANUFACTURER    Alex Luberg
 
 #undef PRODUCT
-#define PRODUCT         Redox_Wireless
+#define PRODUCT         Redox Wireless
